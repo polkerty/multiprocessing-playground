@@ -58,14 +58,14 @@ int main(int argc, char *argv[])
 
             for ( int j = 0; j < num_vars; ++j ) {
                 unsigned int val =((unsigned int*) shared_mem)[j];
-                printf("X%d < [%d] = %u\n", i, j, val );
+                printf("%c < [%d] = %u\n", ('A' + i), j, val );
                 vals[j] = val;
             }
 
             for ( int j = 0; j < num_vars; ++j ) {
                 unsigned int next = j < num_vars - 1 ? vals[j + 1] : vals[j - 1] + vals[j];
                 ((unsigned int*) shared_mem)[j] = next;
-                printf("X%d > [%d] = %u\n", i, j, next);
+                printf("%c > [%d] = %u\n",  ('A' + i), j, next);
 
             }
 
