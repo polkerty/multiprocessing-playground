@@ -37,7 +37,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    *(int*) shared_mem = 0;
+    *(int*) shared_mem = 1;
+    ((int*) shared_mem)[1] = 1;
 
     // Fork into num_processes
     for (int i = 0; i < num_processes; i++) {
@@ -47,14 +48,16 @@ int main(int argc, char *argv[])
             return 1;
         } else if (pid == 0) {
             // Child process
-            int read = *(int*)shared_mem;
-            printf("Child %d reading: '%d'\n", i, read);
+            int n1 = *(int*)shared_mem;
+            int n2 = ((int*)shared_mem)[1];
+            printf("Child %d reading: '%d + %d'\n", i, n1, n2);
 
             // Write something back to the shared memory
-            int next_value = read + 1;
-            *(int*)shared_mem = next_value;
+            int n3 = n1 + n2;
+            *(int*)shared_mem = n2;
+            ((int*)shared_mem)[1] = n3;
 
-            printf("Child %d writing: '%d'\n", i, next_value);
+            printf("Child %d writing: '%d %d'\n", i, n2, n3);
 
             // Detach from shared memory in the child
             shmdt(shared_mem);
