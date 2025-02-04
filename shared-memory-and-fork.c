@@ -6,6 +6,8 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <stdint.h>
+#include <semaphore.h>
+#include <dispatch/dispatch.h>
 
 #define INT_NAME(i)  ('A' + ((i) / (26 * 26))),  ('a' + (((i) % (26 * 26))/26)), ('a' + ((i) % 26)) 
 
@@ -50,6 +52,11 @@ int main(int argc, char *argv[])
         ((unsigned int*) shared_mem)[i] = 1;
     }
 
+    // put a semaphore just at the end of the integers
+    dispatch_semaphore_t *sem = (dispatch_semaphore_t *)(&((unsigned int*)shared_mem)[num_vars]);
+
+    *sem = dispatch_semaphore_create(1); 
+
     // Fork into num_processes
     for (int i = 0; i < num_processes; i++) {
         pid_t pid = fork();
@@ -60,6 +67,8 @@ int main(int argc, char *argv[])
             unsigned int vals[num_vars];
 
             unsigned int highest = 0;
+
+            dispatch_semaphore_wait(*sem, DISPATCH_TIME_FOREVER);
 
             for ( int j = 0; j < num_vars; ++j ) {
                 unsigned int val =((unsigned int*) shared_mem)[j];
@@ -78,6 +87,8 @@ int main(int argc, char *argv[])
                 ((unsigned int*) shared_mem)[j] = next;
                 printf("%c%c%c %d > [%d] = %u\n", INT_NAME(i), i, j, next);
             }
+
+            dispatch_semaphore_signal(*sem);
 
             printf("--------------\n");
 
@@ -99,6 +110,8 @@ int main(int argc, char *argv[])
     for ( int i = 0; i < num_vars; ++i) {
         printf("[%d] = %u\n", i, ((int*)shared_mem)[i]);
     }
+
+    dispatch_release(*sem);
 
     // Detach from shared memory in the parent
     shmdt(shared_mem);
