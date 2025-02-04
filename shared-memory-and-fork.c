@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <stdint.h>
+
+#define INT_NAME(i)  ('A' + ((i) / (26 * 26))),  ('a' + (((i) % (26 * 26))/26)), ('a' + ((i) % 26)) 
 
 int main(int argc, char *argv[])
 {
@@ -56,18 +59,28 @@ int main(int argc, char *argv[])
         } else if (pid == 0) {
             unsigned int vals[num_vars];
 
+            unsigned int highest = 0;
+
             for ( int j = 0; j < num_vars; ++j ) {
                 unsigned int val =((unsigned int*) shared_mem)[j];
-                printf("%c < [%d] = %u\n", ('A' + i), j, val );
+                printf("%c%c%c %d < [%d] = %u\n", INT_NAME(i), i, j, val );
                 vals[j] = val;
+                if ( val > highest ) {
+                    // Not necessarily true due to integer overflow!
+                    highest = val;
+                }
             }
+
+            printf("^%c%c%c %d = %u\n", INT_NAME(i), i, highest);
 
             for ( int j = 0; j < num_vars; ++j ) {
-                unsigned int next = j < num_vars - 1 ? vals[j + 1] : vals[j - 1] + vals[j];
+                unsigned int next = vals[j] + 1;
                 ((unsigned int*) shared_mem)[j] = next;
-                printf("%c > [%d] = %u\n",  ('A' + i), j, next);
-
+                printf("%c%c%c %d > [%d] = %u\n", INT_NAME(i), i, j, next);
             }
+
+            printf("--------------\n");
+
 
             // Detach from shared memory in the child
             shmdt(shared_mem);
