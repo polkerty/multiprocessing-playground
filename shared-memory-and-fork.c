@@ -20,8 +20,8 @@ int main(int argc, char *argv[])
     }
 
     int num_vars = atoi(argv[2]);
-    if (num_vars <= 0) {
-        fprintf(stderr, "Error: Number of vars must be positive.\n");
+    if (num_vars <= 1) {
+        fprintf(stderr, "Error: Number of vars must be 2 or more.\n");
         return 1;
     }
 
