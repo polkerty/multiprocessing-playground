@@ -8,14 +8,20 @@
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <num_processes>\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <num_processes> <vars per process>\n", argv[0]);
         return 1;
     }
 
     int num_processes = atoi(argv[1]);
     if (num_processes <= 0) {
         fprintf(stderr, "Error: Number of processes must be positive.\n");
+        return 1;
+    }
+
+    int num_vars = atoi(argv[2]);
+    if (num_vars <= 0) {
+        fprintf(stderr, "Error: Number of vars must be positive.\n");
         return 1;
     }
 
@@ -37,8 +43,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    *(int*) shared_mem = 1;
-    ((int*) shared_mem)[1] = 1;
+    for ( int i = 0; i < num_vars; ++i) {
+        ((unsigned int*) shared_mem)[i] = 1;
+    }
 
     // Fork into num_processes
     for (int i = 0; i < num_processes; i++) {
@@ -47,17 +54,20 @@ int main(int argc, char *argv[])
             perror("fork");
             return 1;
         } else if (pid == 0) {
-            // Child process
-            int n1 = *(int*)shared_mem;
-            int n2 = ((int*)shared_mem)[1];
-            printf("Child %d reading: '%d + %d'\n", i, n1, n2);
+            unsigned int vals[num_vars];
 
-            // Write something back to the shared memory
-            int n3 = n1 + n2;
-            *(int*)shared_mem = n2;
-            ((int*)shared_mem)[1] = n3;
+            for ( int j = 0; j < num_vars; ++j ) {
+                unsigned int val =((unsigned int*) shared_mem)[j];
+                printf("X%d < [%d] = %u\n", i, j, val );
+                vals[j] = val;
+            }
 
-            printf("Child %d writing: '%d %d'\n", i, n2, n3);
+            for ( int j = 0; j < num_vars; ++j ) {
+                unsigned int next = j < num_vars - 1 ? vals[j + 1] : vals[j - 1] + vals[j];
+                ((unsigned int*) shared_mem)[j] = next;
+                printf("X%d > [%d] = %u\n", i, j, next);
+
+            }
 
             // Detach from shared memory in the child
             shmdt(shared_mem);
@@ -73,7 +83,9 @@ int main(int argc, char *argv[])
     }
 
     // Now the parent reads the final contents in shared memory
-    printf("Parent reading final content: '%d'\n", *(int*)shared_mem);
+    for ( int i = 0; i < num_vars; ++i) {
+        printf("[%d] = %u\n", i, ((int*)shared_mem)[i]);
+    }
 
     // Detach from shared memory in the parent
     shmdt(shared_mem);
