@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 
     // Create the shared memory segment, size = 1024 bytes
     int shmid = shmget(key, 1024, 0666 | IPC_CREAT);
+
     if (shmid == -1) {
         perror("shmget");
         return 1;
@@ -36,8 +37,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Initialize the shared memory with some string
-    strcpy(shared_mem, "Initial data in shared memory");
+    *(int*) shared_mem = 0;
 
     // Fork into num_processes
     for (int i = 0; i < num_processes; i++) {
@@ -47,14 +47,14 @@ int main(int argc, char *argv[])
             return 1;
         } else if (pid == 0) {
             // Child process
-            printf("Child %d reading: '%s'\n", i, shared_mem);
+            int read = *(int*)shared_mem;
+            printf("Child %d reading: '%d'\n", i, read);
 
             // Write something back to the shared memory
-            char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Child %d was here!", i);
-            strcpy(shared_mem, buffer);
+            int next_value = read + 1;
+            *(int*)shared_mem = next_value;
 
-            printf("Child %d writing: '%s'\n", i, buffer);
+            printf("Child %d writing: '%d'\n", i, next_value);
 
             // Detach from shared memory in the child
             shmdt(shared_mem);
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     }
 
     // Now the parent reads the final contents in shared memory
-    printf("Parent reading final content: '%s'\n", shared_mem);
+    printf("Parent reading final content: '%d'\n", *(int*)shared_mem);
 
     // Detach from shared memory in the parent
     shmdt(shared_mem);
